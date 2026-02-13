@@ -31,11 +31,20 @@ const App: React.FC = () => {
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
 
 
+  const [loading, setLoading] = useState(true);
+
   // Initialize from Supabase
   useEffect(() => {
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -64,13 +73,8 @@ const App: React.FC = () => {
     init();
   }, [session]);
 
-  if (!session) {
-    return <AuthView />;
-  }
 
-  // Save data effects - REMOVED (we save on action now)
-  // But we still need to update profile when it changes?
-  // UserProfile change -> save to DB.
+  // Save data effects
   // We can keep a useEffect for that BUT we should debounce it or just save on "Save" button in Profile view.
   // ProfileView has `onUpdate`. `onUpdate` updates state.
   // Let's add an effect to save profile when it changes.
@@ -81,6 +85,18 @@ const App: React.FC = () => {
       api.updateProfile(userProfile);
     }
   }, [userProfile]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-zinc-900 text-white">
+        جاري التحميل...
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <AuthView />;
+  }
 
   const handleSaveSession = async (session: WorkoutSession) => {
     // Optimistic update
